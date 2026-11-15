@@ -1,8 +1,22 @@
 import asyncio
 import httpx
 
-from app.config import CENTRAL_URL, GROUP_NAME, PUBLIC_URL, logger
-from app.database import get_pending_messages, mark_message_synced
+from app.config import (
+    CENTRAL_URL,
+    GROUP_NAME,
+    HEARTBEAT_INTERVAL,
+    MAX_HEALTH_FAILURES,
+    PUBLIC_URL,
+    REGISTER_INTERVAL,
+    db_lock,
+    logger,
+)
+from app.database import (
+    get_max_synced_lamport,
+    get_pending_messages,
+    mark_message_synced,
+    save_incoming_message,
+)
 from app.schemas import FederatedMessage
 
 central_online = True
@@ -19,6 +33,28 @@ async def register_with_central(client: httpx.AsyncClient):
             logger.warning(f"REGISTER_FAIL status={resp.status_code} body={resp.text}")
     except Exception as exc:
         logger.warning(f"REGISTER_ERROR error={exc}")
+
+
+async def recover_history(client: httpx.AsyncClient):
+    since_lamport = get_max_synced_lamport()
+    try:
+        resp = await client.get(
+            f"{CENTRAL_URL}/history", params={"since": since_lamport}, timeout=5.0
+        )
+        if 200 <= resp.status_code < 300:
+            data = resp.json()
+            messages_list = data if isinstance(data, list) else data.get("messages", [])
+            recovered = 0
+            async with db_lock:
+                for raw_msg in messages_list:
+                    msg = FederatedMessage.model_validate(raw_msg)
+                    if save_incoming_message(msg):
+                        recovered += 1
+            logger.info(
+                f"HISTORY_SYNC since={since_lamport} fetched={len(messages_list)} new_applied={recovered}"
+            )
+    except Exception as exc:
+        logger.warning(f"HISTORY_SYNC_ERROR since={since_lamport} error={exc}")
 
 
 async def send_with_backoff(client: httpx.AsyncClient, msg: FederatedMessage):
@@ -67,5 +103,40 @@ async def flush_pending_messages(client: httpx.AsyncClient):
 
 
 async def background_supervisor():
-    while True:
-        await asyncio.sleep(3600)
+    global central_online, consecutive_failures
+    last_register = 0.0
+
+    async with httpx.AsyncClient() as client:
+        await register_with_central(client)
+        await recover_history(client)
+        await flush_pending_messages(client)
+
+        while True:
+            await asyncio.sleep(HEARTBEAT_INTERVAL)
+            try:
+                resp = await client.get(f"{CENTRAL_URL}/health", timeout=3.0)
+                if 200 <= resp.status_code < 300:
+                    if not central_online:
+                        logger.info("CENTRAL_RECOVERED ejecutando re-registro y sincronizacion")
+                        central_online = True
+                        consecutive_failures = 0
+                        await register_with_central(client)
+                        await recover_history(client)
+                        await flush_pending_messages(client)
+                    else:
+                        consecutive_failures = 0
+                else:
+                    raise RuntimeError(f"Status {resp.status_code}")
+            except Exception as exc:
+                consecutive_failures += 1
+                logger.warning(
+                    f"HEARTBEAT_FAIL count={consecutive_failures}/{MAX_HEALTH_FAILURES} error={exc}"
+                )
+                if consecutive_failures >= MAX_HEALTH_FAILURES and central_online:
+                    central_online = False
+                    logger.error("CENTRAL_MARKED_DOWN guardando mensajes en cola local")
+
+            now = asyncio.get_event_loop().time()
+            if central_online and (now - last_register >= REGISTER_INTERVAL):
+                await register_with_central(client)
+                last_register = now
