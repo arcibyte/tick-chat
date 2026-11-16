@@ -151,3 +151,43 @@ def get_local_users() -> List[str]:
     rows = cursor.fetchall()
     conn.close()
     return [row["username"] for row in rows]
+def get_max_synced_lamport() -> int:
+    """Retorna el lamport máximo de los mensajes sincronizados (para recuperación de historial)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COALESCE(MAX(lamport), 0) FROM messages WHERE synced = 1")
+    row = cursor.fetchone()
+    conn.close()
+    return int(row[0]) if row else 0
+
+def mark_message_synced(msg_id: str, status: int = 1):
+    """Actualiza el estado de sincronización de un mensaje en la BD."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE messages SET synced = ? WHERE id = ?", (status, msg_id))
+    conn.commit()
+    conn.close()
+
+def get_pending_messages() -> List[FederatedMessage]:
+    """Retorna los mensajes locales pendientes de sincronizar (synced = 0) ordenados por Lamport."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, from_user, origin, lamport, sent_at, body
+        FROM messages
+        WHERE synced = 0
+        ORDER BY lamport ASC, origin ASC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [
+        FederatedMessage(
+            id=row["id"],
+            **{"from": row["from_user"]},
+            origin=row["origin"],
+            lamport=row["lamport"],
+            sent_at=row["sent_at"],
+            body=row["body"],
+        )
+        for row in rows
+    ]
