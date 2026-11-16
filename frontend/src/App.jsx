@@ -23,7 +23,11 @@ export default function App() {
       setServerOnline(isOnline);
 
       const histData = await getHistory();
-      if (histData) setMessages(histData);
+      if (histData && Array.isArray(histData)) {
+        // Ordenamiento estricto por Relojes de Lamport
+        const sortedMessages = histData.sort((a, b) => (a.lamport || 0) - (b.lamport || 0));
+        setMessages(sortedMessages);
+      }
 
       const userData = await getUsers();
       if (userData) setUsers(userData);
@@ -34,27 +38,50 @@ export default function App() {
     return () => clearInterval(interval);
   }, [username]);
 
-  // Interceptor global de comandos para abrirlos en la terminal flotante
+  // Interceptor global de comandos (/history, /users, /ayuda, /help, /salir, /exit)
   const handleSendMessageInterceptor = async (text) => {
-    const trimmed = text.trim();
+    const trimmed = text.trim().toLowerCase();
 
     if (trimmed === '/history') {
       const histData = await getHistory();
       setConsoleData({
         isOpen: true,
-        title: 'Terminal Node - Historial Distribuido (Lamport Clocks)',
+        title: 'Terminal Node - Distributed History (Lamport Clocks)',
         content: JSON.stringify(histData, null, 2),
       });
-      return true; // Comando interceptado
+      return true;
     }
 
     if (trimmed === '/users') {
       const userData = await getUsers();
       setConsoleData({
         isOpen: true,
-        title: 'Terminal Node - Nodos / Usuarios Conectados',
+        title: 'Terminal Node - Active Nodes / Users',
         content: JSON.stringify(userData, null, 2),
       });
+      return true;
+    }
+
+    if (trimmed === '/ayuda' || trimmed === '/help') {
+      const helpText = {
+        available_commands: {
+          "/history": "Displays full message history synchronized via Lamport Clocks / Muestra el historial completo sincronizado con Relojes de Lamport.",
+          "/users": "Displays active nodes and connected users in the distributed network / Muestra nodos y usuarios activos en la red.",
+          "/ayuda | /help": "Displays this interactive help menu / Muestra este menú de ayuda.",
+          "/salir | /exit": "Closes current session and returns to login / Cierra la sesión actual y regresa al login."
+        },
+        architecture: "Tick-Chat - FastAPI & React Distributed Chat System"
+      };
+      setConsoleData({
+        isOpen: true,
+        title: 'Terminal Node - System Help / Ayuda',
+        content: JSON.stringify(helpText, null, 2),
+      });
+      return true;
+    }
+
+    if (trimmed === '/salir' || trimmed === '/exit') {
+      setUsername(null); 
       return true;
     }
 
@@ -70,10 +97,8 @@ export default function App() {
       {/* Contenedor principal */}
       <div className="flex h-full w-full max-w-7xl md:h-[92vh] bg-slate-900/40 backdrop-blur-2xl md:border md:border-slate-800/80 md:rounded-3xl shadow-2xl overflow-hidden relative">
         
-        {/* Barra lateral */}
         <Sidebar serverOnline={serverOnline} users={users} />
 
-        {/* Panel del Chat */}
         <div className="flex-1 flex flex-col h-full bg-slate-950/30 relative">
           {/* Cabecera del chat */}
           <header className="px-6 py-4 bg-slate-900/60 backdrop-blur-md border-b border-slate-800/80 flex items-center justify-between z-10 shadow-sm">
@@ -91,10 +116,10 @@ export default function App() {
             </div>
           </header>
 
-          {/* Ventana de mensajes limpia */}
+          {/* Ventana de mensajes */}
           <ChatWindow messages={messages} currentUsername={username} />
 
-          {/* Consola flotante para mostrar /history y /users sin romper el chat */}
+          {/* Consola flotante de comandos */}
           {consoleData.isOpen && (
             <div className="absolute bottom-20 left-6 right-6 bg-slate-950/95 border border-indigo-500/40 rounded-2xl shadow-2xl p-4 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
