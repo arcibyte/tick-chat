@@ -1,8 +1,7 @@
 import sqlite3
 from typing import List, Optional
+from app.config import DB_PATH
 from app.schemas import FederatedMessage
-
-DB_PATH = "chat.db"
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -93,41 +92,48 @@ def save_incoming_message(msg: FederatedMessage, synced: int = 1) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
     try:
+        # Usamos msg.from_ para acceder al campo correcto del esquema federado
         cursor.execute("""
             INSERT INTO messages (id, from_user, origin, lamport, sent_at, body, synced)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (msg.id, msg.from_user, msg.origin, msg.lamport, msg.sent_at, msg.body, synced))
+        """, (msg.id, msg.from_, msg.origin, msg.lamport, msg.sent_at, msg.body, synced))
         conn.commit()
         success = True
     except sqlite3.IntegrityError:
-        # El ID ya existe en la base de datos (duplicado)
         success = False
     finally:
         conn.close()
     return success
 
 def get_history(since_lamport: Optional[int] = None) -> List[dict]:
-    """Retorna el historial ordenado por (lamport, origin) según la especificación."""
+    """Retorna el historial ordenado por (lamport, origin) adaptando la clave 'from'."""
     conn = get_connection()
     cursor = conn.cursor()
     
     if since_lamport is not None:
         cursor.execute("""
-            SELECT id, from_user, origin, lamport, sent_at, body 
+            SELECT id, from_user, origin, lamport, sent_at, body, synced 
             FROM messages 
             WHERE lamport > ? 
             ORDER BY lamport ASC, origin ASC
         """, (since_lamport,))
     else:
         cursor.execute("""
-            SELECT id, from_user, origin, lamport, sent_at, body 
+            SELECT id, from_user, origin, lamport, sent_at, body, synced 
             FROM messages 
             ORDER BY lamport ASC, origin ASC
         """)
     
     rows = cursor.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+    
+    # Mapeamos 'from_user' a 'from' para que el cliente JSON lo lea correctamente
+    history = []
+    for row in rows:
+        d = dict(row)
+        d["from"] = d.pop("from_user")
+        history.append(d)
+    return history
 
 def create_local_user(username: str) -> bool:
     """Registra un usuario local en la base de datos."""
@@ -151,8 +157,9 @@ def get_local_users() -> List[str]:
     rows = cursor.fetchall()
     conn.close()
     return [row["username"] for row in rows]
+
 def get_max_synced_lamport() -> int:
-    """Retorna el lamport máximo de los mensajes sincronizados (para recuperación de historial)."""
+    """Retorna el lamport máximo de los mensajes sincronizados."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT COALESCE(MAX(lamport), 0) FROM messages WHERE synced = 1")
@@ -169,7 +176,7 @@ def mark_message_synced(msg_id: str, status: int = 1):
     conn.close()
 
 def get_pending_messages() -> List[FederatedMessage]:
-    """Retorna los mensajes locales pendientes de sincronizar (synced = 0) ordenados por Lamport."""
+    """Retorna los mensajes locales pendientes de sincronizar (synced = 0)."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -182,12 +189,14 @@ def get_pending_messages() -> List[FederatedMessage]:
     conn.close()
     return [
         FederatedMessage(
-            id=row["id"],
-            **{"from": row["from_user"]},
-            origin=row["origin"],
-            lamport=row["lamport"],
-            sent_at=row["sent_at"],
-            body=row["body"],
+            **{
+                "id": row["id"],
+                "from": row["from_user"],
+                "origin": row["origin"],
+                "lamport": row["lamport"],
+                "sent_at": row["sent_at"],
+                "body": row["body"],
+            }
         )
         for row in rows
     ]
