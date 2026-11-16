@@ -2,6 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import GROUP_NAME
 from app.database import init_db
@@ -19,5 +20,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=f"TickChat Node - {GROUP_NAME}", lifespan=lifespan)
+
+# Configuración de CORS para permitir peticiones desde el frontend web
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite conexiones desde cualquier origen (ideal para desarrollo local)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(fed_router)
-app.include_router(local_router)
+app.include_router(local_router)s
