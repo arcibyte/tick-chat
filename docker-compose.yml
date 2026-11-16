@@ -1,0 +1,48 @@
+# Despliegue del servidor de grupo de tick-chat.
+#
+# Uso:
+#   1. Copiar .env.example a .env y ajustar los valores.
+#   2. docker compose up --build
+#
+# Toda la configuración llega por variables de entorno (requisito 1 del
+# enunciado). Los valores ${VAR:-defecto} se leen del archivo .env; si la
+# variable no está definida, se usa el valor después de ":-".
+
+services:
+  server:
+    build: .
+    image: tick-chat-server
+    container_name: tickchat-${GROUP_NAME:-g1}
+    restart: unless-stopped
+
+    # Puerto de la máquina : puerto del contenedor
+    ports:
+      - "${HOST_PORT:-8000}:8000"
+
+    environment:
+      GROUP_NAME: ${GROUP_NAME:-g1}
+      # URL con la que el servidor central nos contacta (POST /fed/messages).
+      # Debe ser la IP de ESTE computador en la red de la sala, no "localhost".
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8000}
+      # URL del servidor central (nunca se escribe en el código).
+      CENTRAL_URL: ${CENTRAL_URL:-http://host.docker.internal:9000}
+      # La base de datos va dentro del volumen montado en /data.
+      DB_PATH: /data/tickchat.db
+      MAX_HEALTH_FAILURES: ${MAX_HEALTH_FAILURES:-3}
+      HEARTBEAT_INTERVAL: ${HEARTBEAT_INTERVAL:-5.0}
+      REGISTER_INTERVAL: ${REGISTER_INTERVAL:-30.0}
+
+    # Volumen con nombre: los usuarios y el historial sobreviven a
+    # "docker compose restart" y a "docker compose down" (requisito 2).
+    # Solo se borran con "docker compose down -v".
+    volumes:
+      - tickchat-data:/data
+
+    # Permite que el contenedor llegue a servicios que corren en la
+    # máquina anfitriona (por ejemplo mock_central.py en el puerto 9000)
+    # usando el nombre host.docker.internal, también en Linux.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  tickchat-data:
