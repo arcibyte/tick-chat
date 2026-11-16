@@ -92,11 +92,22 @@ def save_incoming_message(msg: FederatedMessage, synced: int = 1) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # Usamos msg.from_ para acceder al campo correcto del esquema federado
+        # Extraemos el diccionario respetando el alias 'from' de Pydantic
+        d = msg.model_dump(by_alias=True)
+        sender = d.get("from") or getattr(msg, "from_", None)
+
         cursor.execute("""
             INSERT INTO messages (id, from_user, origin, lamport, sent_at, body, synced)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (msg.id, msg.from_, msg.origin, msg.lamport, msg.sent_at, msg.body, synced))
+        """, (
+            msg.id, 
+            sender, 
+            msg.origin, 
+            msg.lamport, 
+            msg.sent_at, 
+            msg.body, 
+            synced
+        ))
         conn.commit()
         success = True
     except sqlite3.IntegrityError:
