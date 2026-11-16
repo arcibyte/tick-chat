@@ -11,7 +11,6 @@ export default function LoginModal({ onLogin }) {
     if (!username.trim()) return;
     
     setLoading(true);
-    // Limpiamos el texto ingresado para enviar solo el nombre base requerido por el backend
     const cleanUsername = username.trim().split('@')[0];
     
     await registerUser(cleanUsername);
