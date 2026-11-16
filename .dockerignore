@@ -1,0 +1,14 @@
+# Archivos que NO se copian a la imagen de Docker
+.git
+.gitignore
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+data/
+*.db
+*.db-shm
+*.db-wal
+README.md
+docs/
