@@ -154,8 +154,8 @@ Se definen en `.env` (ver `.env.example`). Nada de esto está escrito en el cód
 **Dos servidores en la misma máquina** (`g3a` y `g3b`), como recomienda el enunciado. Cree un archivo de configuración por servidor y use un nombre de proyecto distinto (`-p`) para que cada uno tenga su propio contenedor y su propio volumen:
 
 ```bash
-# .env.g3a -> GROUP_NAME=g3a, HOST_PORT=8001, PUBLIC_URL=http://host.docker.internal:8001
-# .env.g3b -> GROUP_NAME=g3b, HOST_PORT=8002, PUBLIC_URL=http://host.docker.internal:8002
+# .env.g3a -> GROUP_NAME=g3a, HOST_PORT=8001, PUBLIC_URL=http://localhost:8001
+# .env.g3b -> GROUP_NAME=g3b, HOST_PORT=8002, PUBLIC_URL=http://localhost:8002
 docker compose -p g3a --env-file .env.g3a up --build -d
 docker compose -p g3b --env-file .env.g3b up --build -d
 ```
@@ -178,7 +178,7 @@ docker compose -p g3b --env-file .env.g3b up --build -d
 
 | Rol | Responsable |
 |---|---|
-| Rol 1: Estructura base y federación | arcibyte |
-| Rol 2: Persistencia y servidor local | _(completar)_ |
+| Rol 1: Estructura base y federación | Jhon Arciniegas |
+| Rol 2: Persistencia y servidor local | Ricardo Celis |
 | Rol 3: Contenedores, cliente y documentación | Valentina Tarazona |
-| Rol 4: Simulación, experimento y póster | _(completar)_ |
+| Rol 4: Simulación, experimento y póster | Andres Caicedo |
