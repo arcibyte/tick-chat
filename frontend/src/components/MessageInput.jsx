@@ -10,16 +10,15 @@ export default function MessageInput({ currentUsername, onInterceptSend }) {
     const messageText = text.trim();
     if (!messageText) return;
 
-    //interceptar si es un comando local (/history, /users)
+    // interceptar si es un comando local (/history, /users, /clear, /help, etc.)
     if (onInterceptSend) {
       const intercepted = await onInterceptSend(messageText);
       if (intercepted) {
         setText('');
-        return; // Detenemos el envío normal si era un comando
+        return; 
       }
     }
 
-    // 2. Envío normal de mensaje a la API usando el username limpio registrado
     const success = await postMessage(currentUsername, messageText);
     if (success) {
       setText('');
@@ -32,7 +31,7 @@ export default function MessageInput({ currentUsername, onInterceptSend }) {
         type="text"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Escribe un mensaje a #general (o usa /history, /users)..."
+        placeholder="Escribe un mensaje a #general (o usa /clear, /history, /users, /help)..."
         className="flex-1 px-4 py-3 rounded-xl bg-slate-950/80 border border-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white placeholder-slate-500 text-sm transition-all shadow-inner"
       />
       <button
