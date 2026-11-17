@@ -38,7 +38,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [username]);
 
-  // Interceptor global de comandos (/history, /users, /ayuda, /help, /salir, /exit)
+  // Interceptor global de comandos (/history, /users, /ayuda, /clear, /salir)
   const handleSendMessageInterceptor = async (text) => {
     const trimmed = text.trim().toLowerCase();
 
@@ -67,6 +67,7 @@ export default function App() {
         available_commands: {
           "/history": "Displays full message history synchronized via Lamport Clocks / Muestra el historial completo sincronizado con Relojes de Lamport.",
           "/users": "Displays active nodes and connected users in the distributed network / Muestra nodos y usuarios activos en la red.",
+          "/clear | /limpiar": "Clears the local chat view / Limpia la vista local del chat.",
           "/ayuda | /help": "Displays this interactive help menu / Muestra este menú de ayuda.",
           "/salir | /exit": "Closes current session and returns to login / Cierra la sesión actual y regresa al login."
         },
@@ -77,6 +78,11 @@ export default function App() {
         title: 'Terminal Node - System Help / Ayuda',
         content: JSON.stringify(helpText, null, 2),
       });
+      return true;
+    }
+
+    if (trimmed === '/clear' || trimmed === '/limpiar') {
+      setMessages([]); // Vacía el arreglo de mensajes localmente
       return true;
     }
 
