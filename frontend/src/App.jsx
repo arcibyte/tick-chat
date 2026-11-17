@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import LoginModal from './components/LoginModal';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
@@ -14,9 +14,19 @@ export default function App() {
   
   // Estado para la consola flotante de comandos
   const [consoleData, setConsoleData] = useState({ isOpen: false, title: '', content: '' });
+  
+  // Referencia para el umbral de Lamport
+  const clearLimitRef = useRef(0);
 
   useEffect(() => {
-    if (!username) return;
+    if (!username) {
+      clearLimitRef.current = 0;
+      return;
+    }
+
+    // Recuperar el límite guardado en el navegador para este usuario
+    const savedLimit = localStorage.getItem(`tick_chat_clear_limit_${username}`);
+    clearLimitRef.current = savedLimit ? parseInt(savedLimit, 10) : 0;
 
     const fetchData = async () => {
       const isOnline = await checkHealth();
@@ -24,9 +34,14 @@ export default function App() {
 
       const histData = await getHistory();
       if (histData && Array.isArray(histData)) {
-        // Ordenamiento estricto por Relojes de Lamport
         const sortedMessages = histData.sort((a, b) => (a.lamport || 0) - (b.lamport || 0));
-        setMessages(sortedMessages);
+        
+        // Filtramos usando el umbral de Lamport guardado
+        const filteredMessages = clearLimitRef.current > 0
+          ? sortedMessages.filter(msg => (msg.lamport || 0) > clearLimitRef.current)
+          : sortedMessages;
+
+        setMessages(filteredMessages);
       }
 
       const userData = await getUsers();
@@ -38,7 +53,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [username]);
 
-  // Interceptor global de comandos (/history, /users, /ayuda, /clear, /salir)
+  // Interceptor global de comandos
   const handleSendMessageInterceptor = async (text) => {
     const trimmed = text.trim().toLowerCase();
 
@@ -65,11 +80,11 @@ export default function App() {
     if (trimmed === '/ayuda' || trimmed === '/help') {
       const helpText = {
         available_commands: {
-          "/history": "Displays full message history synchronized via Lamport Clocks / Muestra el historial completo sincronizado con Relojes de Lamport.",
-          "/users": "Displays active nodes and connected users in the distributed network / Muestra nodos y usuarios activos en la red.",
-          "/clear | /limpiar": "Clears the local chat view / Limpia la vista local del chat.",
-          "/ayuda | /help": "Displays this interactive help menu / Muestra este menú de ayuda.",
-          "/salir | /exit": "Closes current session and returns to login / Cierra la sesión actual y regresa al login."
+          "/history": "Displays full message history synchronized via Lamport Clocks.",
+          "/users": "Displays active nodes and connected users.",
+          "/clear | /limpiar": "Clears the local chat view permanently until a new message arrives.",
+          "/ayuda | /help": "Displays this interactive help menu.",
+          "/salir | /exit": "Closes current session and returns to login."
         },
         architecture: "Tick-Chat - FastAPI & React Distributed Chat System"
       };
@@ -82,7 +97,16 @@ export default function App() {
     }
 
     if (trimmed === '/clear' || trimmed === '/limpiar') {
-      setMessages([]); // Vacía el arreglo de mensajes localmente
+      // Obtenemos el historial actual del servidor para sacar el Max Lamport real
+      const histData = await getHistory();
+      const maxLamport = histData && Array.isArray(histData)
+        ? histData.reduce((max, m) => Math.max(max, m.lamport || 0), 0)
+        : 0;
+
+      clearLimitRef.current = maxLamport;
+      localStorage.setItem(`tick_chat_clear_limit_${username}`, maxLamport);
+      
+      setMessages([]);
       return true;
     }
 
@@ -100,13 +124,11 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#090d16] text-slate-100 justify-center items-center p-0 md:p-4">
-      {/* Contenedor principal */}
       <div className="flex h-full w-full max-w-7xl md:h-[92vh] bg-slate-900/40 backdrop-blur-2xl md:border md:border-slate-800/80 md:rounded-3xl shadow-2xl overflow-hidden relative">
         
         <Sidebar serverOnline={serverOnline} users={users} />
 
         <div className="flex-1 flex flex-col h-full bg-slate-950/30 relative">
-          {/* Cabecera del chat */}
           <header className="px-6 py-4 bg-slate-900/60 backdrop-blur-md border-b border-slate-800/80 flex items-center justify-between z-10 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50" />
@@ -122,10 +144,8 @@ export default function App() {
             </div>
           </header>
 
-          {/* Ventana de mensajes */}
           <ChatWindow messages={messages} currentUsername={username} />
 
-          {/* Consola flotante de comandos */}
           {consoleData.isOpen && (
             <div className="absolute bottom-20 left-6 right-6 bg-slate-950/95 border border-indigo-500/40 rounded-2xl shadow-2xl p-4 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
@@ -145,7 +165,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Input de mensajes */}
           <MessageInput currentUsername={username} onInterceptSend={handleSendMessageInterceptor} />
         </div>
       </div>
