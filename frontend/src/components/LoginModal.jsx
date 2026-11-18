@@ -11,10 +11,12 @@ export default function LoginModal({ onLogin }) {
     if (!username.trim()) return;
     
     setLoading(true);
-    const cleanUsername = username.trim().split('@')[0];
+    const raw = username.trim().toLowerCase();
+    // Si el usuario no escribió "@g1", se lo agregamos automáticamente
+    const formattedUsername = raw.includes('@') ? raw : `${raw}@g1`;
     
-    await registerUser(cleanUsername);
-    onLogin(cleanUsername);
+    await registerUser(formattedUsername);
+    onLogin(formattedUsername);
     setLoading(false);
   };
 
@@ -39,7 +41,7 @@ export default function LoginModal({ onLogin }) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="ej. jhon"
+              placeholder="ej. jhon o jhon@g1"
               className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white placeholder-slate-600 transition-all text-sm"
               required
             />
