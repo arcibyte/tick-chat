@@ -1,0 +1,11 @@
+# Excluir dependencias y entornos locales
+node_modules/
+frontend/node_modules/
+.venv/
+venv/
+.git/
+dist/
+build/
+__pycache__/
+*.pyc
+.env

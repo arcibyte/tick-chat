@@ -29,14 +29,25 @@ class MessageSendRequest(BaseModel):
 
 @router.post("/users", status_code=status.HTTP_201_CREATED)
 def register_user(payload: UserRequest):
-    """Crea un usuario local (ej: ana@g1)."""
-    success = create_local_user(payload.username)
+    """Crea un usuario local (ej: ana@g1) o permite el acceso si ya existe."""
+    username = payload.username.strip()
+    if not username or "@" not in username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El formato debe ser usuario@grupo (ej: ana@g1).",
+        )
+
+    existing_users = get_local_users()
+    if username in existing_users:
+        return {"message": f"Bienvenido de nuevo, {username}."}
+
+    success = create_local_user(username)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El usuario ya existe o el formato es inválido.",
+            detail="No se pudo registrar el usuario.",
         )
-    return {"message": f"Usuario {payload.username} creado con éxito."}
+    return {"message": f"Usuario {username} creado con éxito."}
 
 
 @router.get("/users")

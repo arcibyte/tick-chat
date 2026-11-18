@@ -12,11 +12,15 @@ export default function App() {
   const [users, setUsers] = useState([]);
   const [serverOnline, setServerOnline] = useState(true);
   
-  // Estado para la consola flotante de comandos
   const [consoleData, setConsoleData] = useState({ isOpen: false, title: '', content: '' });
-  
-  // Referencia para el umbral de Lamport
   const clearLimitRef = useRef(0);
+
+  // Normalizamos el usuario al hacer login para que SIEMPRE sea "nombre@g1"
+  const handleLogin = (rawUser) => {
+    const clean = rawUser.trim();
+    const formatted = clean.includes('@') ? clean : `${clean}@g1`;
+    setUsername(formatted);
+  };
 
   useEffect(() => {
     if (!username) {
@@ -24,7 +28,6 @@ export default function App() {
       return;
     }
 
-    // Recuperar el límite guardado en el navegador para este usuario
     const savedLimit = localStorage.getItem(`tick_chat_clear_limit_${username}`);
     clearLimitRef.current = savedLimit ? parseInt(savedLimit, 10) : 0;
 
@@ -36,7 +39,6 @@ export default function App() {
       if (histData && Array.isArray(histData)) {
         const sortedMessages = histData.sort((a, b) => (a.lamport || 0) - (b.lamport || 0));
         
-        // Filtramos usando el umbral de Lamport guardado
         const filteredMessages = clearLimitRef.current > 0
           ? sortedMessages.filter(msg => (msg.lamport || 0) > clearLimitRef.current)
           : sortedMessages;
@@ -53,7 +55,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [username]);
 
-  // Interceptor global de comandos
   const handleSendMessageInterceptor = async (text) => {
     const trimmed = text.trim().toLowerCase();
 
@@ -97,7 +98,6 @@ export default function App() {
     }
 
     if (trimmed === '/clear' || trimmed === '/limpiar') {
-      // Obtenemos el historial actual del servidor para sacar el Max Lamport real
       const histData = await getHistory();
       const maxLamport = histData && Array.isArray(histData)
         ? histData.reduce((max, m) => Math.max(max, m.lamport || 0), 0)
@@ -119,7 +119,7 @@ export default function App() {
   };
 
   if (!username) {
-    return <LoginModal onLogin={setUsername} />;
+    return <LoginModal onLogin={handleLogin} />;
   }
 
   return (
@@ -138,9 +138,10 @@ export default function App() {
               </div>
             </div>
             
+            {/* Ya no duplicamos @g1 porque username ya está normalizado */}
             <div className="flex items-center gap-2 bg-slate-950/60 border border-slate-800/80 px-3.5 py-1.5 rounded-full text-xs font-medium text-indigo-300 shadow-inner">
               <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-              {username}@g1
+              {username}
             </div>
           </header>
 
