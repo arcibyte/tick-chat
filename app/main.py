@@ -31,4 +31,4 @@ app.add_middleware(
 )
 
 app.include_router(fed_router)
-app.include_router(local_router)s
+app.include_router(local_router)
