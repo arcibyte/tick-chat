@@ -12,6 +12,10 @@ los usuarios de todos los grupos conversan en una sola sala global: `#general`.
 - Pruebas locales: servidor central simulado (`mock_central.py`) y experimento (`experiment/`).
 
 ---
+## Entregables
+
+- [Bitácora de interoperabilidad](./BITACORA_INTEROPERABILIDAD.md) registro de pruebas entre nodos, contrato `FederatedMessage` e incidentes resueltos.
+- [Póster del proyecto (PDF)](./assets/nombre_del_poster.pdf) resumen de arquitectura y resultados del experimento.
 
 ## Arquitectura
 
@@ -57,30 +61,36 @@ Los clientes (web y consola) **solo** hablan con nuestro servidor, nunca con el 
 
 ```
 tick-chat/
-├── app/                    # servidor de grupo (FastAPI)
-│   ├── main.py             # arranque, CORS y tarea en segundo plano
-│   ├── config.py           # lectura de variables de entorno y logs
-│   ├── schemas.py          # formato de mensaje del protocolo
-│   ├── database.py         # SQLite: usuarios, mensajes, reloj de Lamport
-│   ├── routes_local.py     # API para los clientes
-│   ├── routes_fed.py       # API que llama el servidor central (/fed/...)
-│   └── federation.py       # registro, envío con backoff, heartbeat, historial
-├── frontend/               # cliente web (React + Vite + Tailwind)
-│   ├── src/
-│   │   ├── App.jsx         # estado, consulta periódica y comandos (/history, /clear...)
-│   │   ├── components/     # LoginModal, Sidebar, ChatWindow, MessageInput
-│   │   └── services/api.js # llamadas HTTP a la API local
-│   └── package.json
-├── experiment/             # experimento del póster
-│   ├── run_experiment.py   # automatiza las caídas y las mediciones
-│   ├── plot_results.py     # genera la gráfica
-│   ├── results.csv         # datos medidos
+├── app/                            # servidor de grupo (FastAPI)
+│   ├── main.py                     # arranque, CORS y tarea en segundo plano
+│   ├── config.py                   # lectura de variables de entorno y logs
+│   ├── schemas.py                  # formato de mensaje del protocolo
+│   ├── database.py                 # SQLite: usuarios, mensajes, reloj de Lamport
+│   ├── routes_local.py             # API para los clientes
+│   ├── routes_fed.py               # API que llama el servidor central (/fed/...)
+│   ├── federation.py               # registro, envío con backoff, heartbeat, historial
+│   └── .dockerignore
+├── assets/                         # entregables visuales (póster del proyecto en PDF)
+├── experiment/                     # experimento del póster
+│   ├── run_experiment.py           # automatiza las caídas y las mediciones
+│   ├── plot_results.py             # genera la gráfica
+│   ├── results.csv                 # datos medidos
 │   └── grafica.png / .pdf
-├── mock_central.py         # servidor central simulado para pruebas locales
-├── client.py               # cliente de consola
+├── frontend/                       # cliente web (React + Vite + Tailwind)
+│   ├── src/
+│   │   ├── App.jsx                 # estado, consulta periódica y comandos (/history, /clear...)
+│   │   ├── components/             # LoginModal, Sidebar, ChatWindow, MessageInput
+│   │   └── services/api.js         # llamadas HTTP a la API local
+│   └── package.json
+├── BITACORA_INTEROPERABILIDAD.md   # bitácora de pruebas de interoperabilidad entre nodos
+├── README.md                       # documentación general del proyecto
+├── mock_central.py                 # servidor central simulado para pruebas locales
+├── client.py                       # cliente de consola
 ├── Dockerfile
 ├── docker-compose.yml
-├── .env.example            # plantilla de configuración
+├── .dockerignore
+├── .env.example                    # plantilla de configuración
+├── package.json                    # dependencias raíz (@tailwindcss/postcss)
 └── requirements.txt
 ```
 
