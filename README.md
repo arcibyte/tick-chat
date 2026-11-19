@@ -12,10 +12,34 @@ los usuarios de todos los grupos conversan en una sola sala global: `#general`.
 - Pruebas locales: servidor central simulado (`mock_central.py`) y experimento (`experiment/`).
 
 ---
+
+## Capturas de pantalla
+
+<table>
+  <tr>
+    <td colspan="2" align="center">
+      <img src="./assets/screenshots/login.png" alt="Pantalla de ingreso de Tick-Chat Web" width="100%"><br>
+      <sub><b>Pantalla de ingreso</b> · el usuario escribe su nombre (<code>jhon</code> o <code>jhon@g1</code>) y entra a la sala global.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="./assets/screenshots/chat-web.png" alt="Sala #general en el frontend web" width="100%"><br>
+      <sub><b>Frontend web</b> · sala <code>#general</code> con marcas de Lamport y mensaje federado de <code>@G2</code> resaltado en ámbar.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="./assets/screenshots/chat-consola.png" alt="Cliente de consola dentro del contenedor" width="100%"><br>
+      <sub><b>Cliente de consola</b> · <code>docker compose exec server python client.py</code> mostrando el mismo historial ordenado por Lamport.</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Entregables
 
 - [Bitácora de interoperabilidad](./BITACORA_INTEROPERABILIDAD.md) registro de pruebas entre nodos, contrato `FederatedMessage` e incidentes resueltos.
-- [Póster del proyecto (PDF)](./assets/nombre_del_poster.pdf) resumen de arquitectura y resultados del experimento.
+- [Póster del proyecto (PDF)](./assets/poster.pdf) resumen de arquitectura y resultados del experimento.
 
 ## Arquitectura
 
@@ -70,7 +94,12 @@ tick-chat/
 │   ├── routes_fed.py               # API que llama el servidor central (/fed/...)
 │   ├── federation.py               # registro, envío con backoff, heartbeat, historial
 │   └── .dockerignore
-├── assets/                         # entregables visuales (póster del proyecto en PDF)
+├── assets/                         # entregables visuales
+│   ├── poster.pdf                  # póster del proyecto
+│   └── screenshots/                # capturas usadas en este README
+│       ├── login.png
+│       ├── chat-web.png
+│       └── chat-consola.png
 ├── experiment/                     # experimento del póster
 │   ├── run_experiment.py           # automatiza las caídas y las mediciones
 │   ├── plot_results.py             # genera la gráfica
